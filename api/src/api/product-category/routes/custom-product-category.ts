@@ -23,6 +23,14 @@ export default {
       config: {
         auth: false,
       },
+
     },
+    {
+      method: 'GET',
+      path: '/products/:id',
+      handler: 'product-category.findOne',
+      config: { auth: false },
+    },
+
   ],
 };

@@ -3,8 +3,9 @@
  */
 
 import { factories } from '@strapi/strapi';
- import customRoutes from '../routes/custom-product-category';
-const defaultRouter = factories.createCoreRouter('api::product-category.product-category' as any);
+ import xx from './custom-product-category'
+
+const defaultRouter= factories.createCoreRouter('api::product-category.product-category' as any);
 
 const customRouter = (innerRouter: any, extraRoutes: any[] = []) => {
   let routes: any[] | undefined;
@@ -19,5 +20,5 @@ const customRouter = (innerRouter: any, extraRoutes: any[] = []) => {
   };
 };
 
-
-export default customRouter(defaultRouter,customRoutes.routes );
+ 
+export default customRouter(defaultRouter, xx.routes);

@@ -15,7 +15,7 @@ const Product = () => {
   const [quantity, setQuantity] = useState(1);
 
   const dispatch = useDispatch();
-  const { data, loading, error } = useFetch(`/products/${id}?populate=*`);
+  const { data, loading, error } = useFetch(`/products/2`);
 
   return (
     <div className="product">
