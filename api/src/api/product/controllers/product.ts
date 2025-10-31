@@ -1,4 +1,5 @@
 import { factories } from '@strapi/strapi';
+import { toBoolSafe, toNumSafe, toStringArray, toStringSafe } from '../uiliity';
 
 const DEFAULT_PAGINATION = {
   pageSize: 3,
@@ -33,87 +34,106 @@ const DEFAULT_PAGINATION = {
 
 
 
+async getFilteredProductList(ctx) {
+  const query = ctx.request.query as Record<string, unknown>;
 
-  async getFilteredProductList(ctx) {
-    const query = ctx.request.query as Record<string, unknown>;
+   
+  const search = toStringSafe(query.search);
+  const type = toStringSafe(query.type);
+  const categoryIds = toStringArray(query.category);
+  const isNew = toBoolSafe(query.isNew);
+  const minPrice = toNumSafe(query.minPrice);
+  const maxPrice = toNumSafe(query.maxPrice);
+  const sortBy = toStringSafe(query.sortBy);
+  const pageNum = toNumSafe(query.page) ?? DEFAULT_PAGINATION.page;
+  const pageSize = toNumSafe(query.pageSize) ?? DEFAULT_PAGINATION.pageSize;
 
-    const toStringSafe = (v: unknown): string | undefined =>
-      typeof v === 'string' && v.trim() !== '' ? v : undefined;
-    const toBoolSafe = (v: unknown): boolean | undefined =>
-      typeof v === 'string' ? (v.toLowerCase() === 'true' ? true : v.toLowerCase() === 'false' ? false : undefined) :
-        typeof v === 'boolean' ? v : undefined;
-    const toNumSafe = (v: unknown): number | undefined => {
-      if (typeof v === 'number') return Number.isFinite(v) ? v : undefined;
-      if (typeof v === 'string' && v.trim() !== '') {
-        const n = Number(v);
-        return Number.isFinite(n) ? n : undefined;
-      }
-      return undefined;
-    };
-    const toStringArray = (v: unknown): string[] | undefined => {
-      if (Array.isArray(v)) return v.map(x => String(x)).filter(Boolean);
-      const s = toStringSafe(v);
-      return s ? s.split(',').map(x => x.trim()).filter(Boolean) : undefined;
-    };
+  
+  const filterConditions: any[] = [];
 
-    const search = toStringSafe(query.search);
-    const type = toStringSafe(query.type);
-    const categoryIds = toStringArray(query.category);
-    const isNew = toBoolSafe(query.isNew);
-    const minPrice = toNumSafe(query.minPrice);
-    const maxPrice = toNumSafe(query.maxPrice);
-    const sortBy = toStringSafe(query.sortBy);
+  if (search) {
+    filterConditions.push({
+      $or: [
+        { title: { $containsi: search } },
+        { desc: { $containsi: search } },
+      ],
+    });
+  }
 
-    const pageNum = toNumSafe(query.page) ?? DEFAULT_PAGINATION.page;
-    const pageSize = toNumSafe(query.pageSize) ?? DEFAULT_PAGINATION.pageSize;
-    const start = (pageNum - 1) * pageSize;
+  if (type) {
+    filterConditions.push({ type: { $eq: type } });
+  }
 
-    const filterConditions: any[] = [
-      ...(search ? [{ $or: [{ title: { $containsi: search } }, { desc: { $containsi: search } }] }] : []),
-      ...(type ? [{ type: { $eq: type } }] : []),
-      ...(typeof isNew === 'boolean' ? [{ isNew: { $eq: isNew } }] : []),
-      ...(categoryIds && categoryIds.length ? [{ product_categories: { id: { $in: categoryIds } } }] : []),
-      ...((minPrice != null || maxPrice != null)
-        ? [{ price: { ...(minPrice != null ? { $gte: minPrice } : {}), ...(maxPrice != null ? { $lte: maxPrice } : {}) } }]
-        : []),
-    ];
+  if (typeof isNew === 'boolean') {
+    filterConditions.push({ isNew: { $eq: isNew } });
+  }
 
-    const filters = filterConditions.length ? { $and: filterConditions } : {};
-
-    const [sortField, sortDirection = 'asc'] = sortBy ? sortBy.split(':') : [] as string[];
-    const sort = sortField ? `${sortField}:${sortDirection}` : 'createdAt:desc';
-
-    const findOptions: any = {
-      filters,
-      populate: {
-        img: { fields: ['url', 'name'] },
-        img2: { fields: ['url', 'name'] },
-        product_categories: { fields: ['title'] },
+  if (categoryIds && categoryIds.length) {
+    filterConditions.push({
+      product_categories: {
+        documentId: { $in: categoryIds },
       },
-      sort,
-      start,
-      limit: pageSize,
-    };
+    });
+  }
 
-    const [products, totalFiltered] = await Promise.all([
-      strapi.entityService.findMany('api::product.product', findOptions),
-      strapi.entityService.count('api::product.product', { filters }),
-    ]);
+  if (minPrice != null || maxPrice != null) {
+    const priceCondition: any = {};
+    if (minPrice != null) priceCondition.$gte = minPrice;
+    if (maxPrice != null) priceCondition.$lte = maxPrice;
+    filterConditions.push({ price: priceCondition });
+  }
 
-    const totalPages = Math.ceil(totalFiltered / pageSize);
+  const filters = filterConditions.length ? { $and: filterConditions } : {};
 
-    return {
-      data: products,
-      meta: {
-        pagination: {
-          page: pageNum,
-          pageSize,
-          pageCount: totalPages,
-          total: totalFiltered,
-        },
+   
+  const [sortField, sortDirection = 'asc'] = sortBy
+    ? sortBy.split(':')
+    : ([] as string[]);
+  const sort = sortField ? { [sortField]: sortDirection as 'asc' | 'desc' } : { createdAt: 'desc' as const };
+
+  
+  const productDocumentService = strapi.documents('api::product.product');
+
+  const findOptions = {
+    filters,
+    populate: {
+      img: {
+        fields: ['url', 'name'],
       },
-    };
-  },
+      img2: {
+        fields: ['url', 'name'],
+      },
+      product_categories: {
+        fields: ['title', 'documentId'],
+      },
+    },
+    sort,
+    page: pageNum,
+    pageSize,
+  } as any;  
+
+ 
+  const [products, totalFiltered] = await Promise.all([
+    productDocumentService.findMany(findOptions),
+    productDocumentService.count({ filters }),
+  ]);
+
+ 
+  const pageCount = Math.ceil(totalFiltered / pageSize);
+
+  
+  return {
+    data: products,
+    meta: {
+      pagination: {
+        page: pageNum,
+        pageSize,
+        pageCount,
+        total: totalFiltered,
+      },
+    },
+  };
+},
 
   async findOne(ctx) {
     const { id } = ctx.params;
