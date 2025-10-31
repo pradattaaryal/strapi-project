@@ -29,7 +29,7 @@ const Product = () => {
       <div className="left">
         <div className="images">
           <img
-            src={`http://localhost:1337`+ data.img.url}
+            src={`http://localhost:1337`+ data?.img?.url}
             alt=""
             onClick={() => setSelectedImg("img")}
           />

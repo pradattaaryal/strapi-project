@@ -1,47 +1,47 @@
 import { factories } from '@strapi/strapi';
 
-  const DEFAULT_PAGINATION = {
+const DEFAULT_PAGINATION = {
   pageSize: 3,
   page: 1,
-};export default factories.createCoreController('api::product.product', ({ strapi }) => ({
-  // async find(ctx) {
-  //   const { query } = ctx;
+}; export default factories.createCoreController('api::product.product', ({ strapi }) => ({
+  async find(ctx) {
+    const { query } = ctx;
 
-  //   const products = await strapi.db.query('api::product.product').findMany({
-  //     ...query,
-  //     populate: {
-  //       img: { select: ['url', 'name'] },
-  //       img2: { select: ['url', 'name'] },
-  //       product_categories: {
-  //         select: ['id', 'desc', 'title',],
-  //         populate: {
-  //           img: { select: ['url', 'name'] },
-  //           sub_product_categories: true,
-  //         },
-  //       },
-  //       sub_product_categories: {
-  //         populate: {
-  //           img: { select: ['url', 'name'] },
-  //         }
-  //       },
-  //     },
-  //    //select: ['id', 'title', 'price', 'desc', 'isNew'],
-  //   });
+    const products = await strapi.db.query('api::product.product').findMany({
+      ...query,
+      populate: {
+        img: { select: ['url', 'name'] },
+        img2: { select: ['url', 'name'] },
+        product_categories: {
+          select: ['id', 'desc', 'title',],
+          populate: {
+            img: { select: ['url', 'name'] },
+            sub_product_categories: true,
+          },
+        },
+        sub_product_categories: {
+          populate: {
+            img: { select: ['url', 'name'] },
+          }
+        },
+      },
+      //select: ['id', 'title', 'price', 'desc', 'isNew'],
+    });
 
-  //   return products;
-  // },
-
-
+    return products;
+  },
 
 
-    async getFilteredProductList(ctx) {
+
+
+  async getFilteredProductList(ctx) {
     const query = ctx.request.query as Record<string, unknown>;
 
     const toStringSafe = (v: unknown): string | undefined =>
       typeof v === 'string' && v.trim() !== '' ? v : undefined;
     const toBoolSafe = (v: unknown): boolean | undefined =>
       typeof v === 'string' ? (v.toLowerCase() === 'true' ? true : v.toLowerCase() === 'false' ? false : undefined) :
-      typeof v === 'boolean' ? v : undefined;
+        typeof v === 'boolean' ? v : undefined;
     const toNumSafe = (v: unknown): number | undefined => {
       if (typeof v === 'number') return Number.isFinite(v) ? v : undefined;
       if (typeof v === 'string' && v.trim() !== '') {
@@ -115,13 +115,13 @@ import { factories } from '@strapi/strapi';
     };
   },
 
- async findOne(ctx) {
-    const { id } = ctx.params;  
+  async findOne(ctx) {
+    const { id } = ctx.params;
 
     if (!id) {
       return ctx.badRequest("Product documentId is required.");
     }
-    
+
     const product = await strapi.db.query("api::product.product").findOne({
       where: { documentId: id },
       populate: {
@@ -142,12 +142,12 @@ import { factories } from '@strapi/strapi';
       },
     });
 
- 
+
     if (!product) {
       return ctx.notFound(`Product with documentId ${id} not found.`);
     }
 
     return product;
   },
-   
+
 }));
