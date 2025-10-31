@@ -1,13 +1,20 @@
 export default {
-  routes: [
+    routes: [
     {
-      method: 'GET',
-      path: '/product/:documentId',
-      handler: 'product.findOne',
+      method: "GET",
+      path: "/products/filter",
+      handler: "product.getFilteredProductList",
       config: {
         auth: false,
       },
     },
-  
+    {
+      method: "GET",
+      path: "/products/:id",
+      handler: "product.findOne",
+      config: {
+        auth: false,  
+      },
+    },
   ],
 };

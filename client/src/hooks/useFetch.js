@@ -8,18 +8,25 @@ const useFetch = (url) => {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
         const res = await makeRequest.get(url);
-        setData(res.data.data);
+
+        // 👇 Strapi v5 no longer nests data
+        // Handle both v4 and v5 gracefully
+        const responseData = res.data?.data ? res.data.data : res.data;
+        setData(responseData);
       } catch (err) {
+        console.error("Fetch Error:", err);
         setError(true);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
+
     fetchData();
   }, [url]);
-console.log(data);
+
   return { data, loading, error };
 };
 
